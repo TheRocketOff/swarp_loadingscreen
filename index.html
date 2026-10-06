@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWARP - Chargement</title>
+<style>
+  :root {
+    --accent: #5abeff;
+    --accent-dim: rgba(90, 190, 255, .35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #060910; color: #e7edf6;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  /* ---- Vidéo d'arrière-plan ---------------------------------------------------------------- */
+  #bg-video {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0; background: #060910;
+  }
+
+  /* ---- Dégradé sombre pour la lisibilité ---------------------------------------------------- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(4,8,14,.55) 0%, rgba(4,8,14,.15) 30%, rgba(4,8,14,.25) 65%, rgba(2,5,10,.88) 100%),
+      linear-gradient(90deg, rgba(2,5,10,.55) 0%, rgba(2,5,10,0) 35%, rgba(2,5,10,0) 70%, rgba(2,5,10,.55) 100%);
+  }
+
+  /* ---- Bandeau HUD haut (logo serveur) ------------------------------------------------------ */
+  #hud-top {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: clamp(16px, 3vw, 36px) clamp(20px, 4vw, 56px) 0;
+  }
+
+  #server-name {
+    font-size: clamp(18px, 2.2vw, 28px); font-weight: 800; letter-spacing: .35em;
+    color: #fff; text-shadow: 0 0 16px var(--accent-dim), 0 2px 6px rgba(0,0,0,.6);
+  }
+
+  #server-sub {
+    font-size: clamp(10px, 1vw, 13px); letter-spacing: .3em; color: var(--accent);
+    margin-top: 4px; opacity: .85;
+  }
+
+  #status-line {
+    font-size: clamp(11px, 1.1vw, 14px); letter-spacing: .15em; color: #9aa8bd;
+    text-align: right;
+  }
+
+  /* ---- Zone d'information bas-gauche (nom de la planète/secteur) --------------------------- */
+  #info-zone {
+    position: fixed; left: clamp(20px, 4vw, 56px); bottom: clamp(26px, 6vh, 64px);
+    z-index: 2; max-width: min(70vw, 760px);
+  }
+
+  #info-eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: clamp(11px, 1vw, 13px); letter-spacing: .4em; color: var(--accent);
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  #info-eyebrow::before {
+    content: ""; display: inline-block; width: 28px; height: 2px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  #planet-name {
+    font-size: clamp(30px, 5.2vw, 64px); font-weight: 800; letter-spacing: .04em;
+    color: #fff; text-shadow: 0 0 22px var(--accent-dim), 0 4px 10px rgba(0,0,0,.7);
+    line-height: 1.05;
+  }
+
+  #planet-desc {
+    margin-top: 10px; font-size: clamp(13px, 1.3vw, 17px); color: #c3cde0;
+    text-shadow: 0 2px 6px rgba(0,0,0,.8);
+  }
+
+  /* ---- Barre de progression (bas-droite) ---------------------------------------------------- */
+  #progress-zone {
+    position: fixed; right: clamp(20px, 4vw, 56px); bottom: clamp(26px, 6vh, 64px);
+    z-index: 2; width: min(34vw, 360px); text-align: right;
+  }
+
+  #progress-label {
+    font-size: clamp(11px, 1vw, 13px); letter-spacing: .1em; color: #c3cde0;
+    margin-bottom: 8px; min-height: 1.2em;
+  }
+
+  .bar {
+    width: 100%; height: 3px; background: rgba(255,255,255,.14); overflow: hidden;
+  }
+
+  #bar-fill {
+    height: 100%; width: 0%; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent); transition: width .25s ease-out;
+  }
+
+  #file-name {
+    margin-top: 8px; font-size: clamp(10px, .9vw, 12px); color: #6f7c90; min-height: 1.2em;
+  }
+
+  /* ---- Vignette de coin (détail "HUD") ------------------------------------------------------ */
+  .corner { position: fixed; z-index: 2; width: 28px; height: 28px; border: 1px solid var(--accent-dim); opacity: .8; }
+  .corner.tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+  .corner.tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+  .corner.bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+  .corner.br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+</style>
+</head>
+<body>
+
+<video id="bg-video" autoplay muted loop playsinline>
+  <source id="bg-video-source" src="videos/default.webm" type="video/webm">
+</video>
+<div id="overlay"></div>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div id="hud-top">
+  <div>
+    <div id="server-name">SWARP</div>
+    <div id="server-sub">STAR WARS ROLEPLAY</div>
+  </div>
+  <div id="status-line">Connexion au serveur...</div>
+</div>
+
+<div id="info-zone">
+  <div id="info-eyebrow">Secteur</div>
+  <div id="planet-name">Chargement du secteur...</div>
+  <div id="planet-desc"></div>
+</div>
+
+<div id="progress-zone">
+  <div id="progress-label">Préparation...</div>
+  <div class="bar"><div id="bar-fill"></div></div>
+  <div id="file-name"></div>
+</div>
+
+<audio id="bg-audio" loop></audio>
+
+<script>
+// =================================================================================================
+// SWARP - Écran de chargement dynamique (vidéo par carte)
+// =================================================================================================
+// Rempli à chaque nouvelle carte ajoutée au serveur : chemin vidéo, titre affiché, et (optionnel)
+// une courte description + une ambiance sonore (dossier audio/, voir audio/README.md).
+// "default" est utilisé pour toute carte absente de cette table - gardez toujours une vidéo/
+// un son par défaut présents (voir videos/README.md et audio/README.md).
+// -------------------------------------------------------------------------------------------------
+var MAP_DATA = {
+  "rp_coruscant_v1": {
+    video: "videos/coruscant.webm",
+    title: "Arrivée dans le secteur de Coruscant",
+    desc: "Capitale de la République",
+    audio: null // ex: "audio/coruscant.mp3"
+  },
+  "rp_kamino_v1": {
+    video: "videos/kamino.webm",
+    title: "Approche des plateformes de Kamino",
+    desc: "Monde océanique - Grande Armée de la République",
+    audio: null
+  },
+  "rp_tatooine_v1": {
+    video: "videos/tatooine.webm",
+    title: "Entrée dans l'atmosphère de Tatooine",
+    desc: "Monde désertique des Territoires du Bordure Extérieure",
+    audio: null
+  }
+};
+
+var DEFAULT_ENTRY = {
+  video: "videos/default.webm",
+  title: "Chargement du secteur...",
+  desc: "",
+  audio: null
+};
+
+// -------------------------------------------------------------------------------------------------
+// Récupération du nom de carte : DEUX sources possibles, utilisées l'une et l'autre sans conflit.
+//   1) Le paramètre d'URL "mapname", si sv_loadingurl contient "%m" (voir README.md) - lu dès le
+//      chargement de la page, donc la vidéo correspond déjà avant même que GMod n'ait fini de
+//      s'initialiser.
+//   2) La fonction GameDetails(...), appelée directement par le moteur GMod une fois la connexion
+//      établie (mécanisme standard de l'écran de chargement, indépendant de l'URL) - sert de
+//      confirmation/rattrapage si l'admin a oublié "%m", ou si la carte affichée doit changer
+//      (ex : redirection serveur). La vidéo n'est changée que si le nom diffère de celle déjà
+//      appliquée, pour ne pas relancer inutilement la lecture en cours.
+// -------------------------------------------------------------------------------------------------
+var currentMapName = null;
+
+function getMapNameFromURL() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    return params.get("mapname") || params.get("map");
+  } catch (e) {
+    return null;
+  }
+}
+
+function applyMap(mapname) {
+  if (!mapname || mapname === currentMapName) {
+    return;
+  }
+
+  currentMapName = mapname;
+
+  var entry = MAP_DATA[mapname] || DEFAULT_ENTRY;
+
+  document.getElementById("planet-name").textContent = entry.title || DEFAULT_ENTRY.title;
+  document.getElementById("planet-desc").textContent = entry.desc || "";
+
+  var video = document.getElementById("bg-video");
+  var source = document.getElementById("bg-video-source");
+  var videoPath = entry.video || DEFAULT_ENTRY.video;
+
+  if (source.getAttribute("src") !== videoPath) {
+    source.setAttribute("src", videoPath);
+    video.load();
+
+    // Si la vidéo de la carte est introuvable/corrompue, repli silencieux sur la vidéo par défaut
+    // plutôt que de laisser un cadre noir pendant toute la connexion.
+    video.onerror = function () {
+      if (source.getAttribute("src") !== DEFAULT_ENTRY.video) {
+        source.setAttribute("src", DEFAULT_ENTRY.video);
+        video.load();
+        video.play().catch(function () {});
+      }
+    };
+
+    video.play().catch(function () {
+      // Lecture bloquée par le navigateur/WebView (rare avec autoplay+muted) : sans conséquence
+      // grave, la première frame reste affichée.
+    });
+  }
+
+  var audioPath = entry.audio;
+  var audio = document.getElementById("bg-audio");
+
+  if (audioPath) {
+    if (audio.getAttribute("src") !== audioPath) {
+      audio.setAttribute("src", audioPath);
+      audio.volume = 0.35;
+      audio.play().catch(function () {});
+    }
+  } else {
+    audio.removeAttribute("src");
+  }
+}
+
+// Application immédiate depuis l'URL (si présente), sans attendre GameDetails.
+applyMap(getMapNameFromURL());
+
+// ---- Fonctions appelées directement par GMod (voir wiki.facepunch.com/gmod/Loading_URL) --------
+function GameDetails(servername, serverurl, mapname, maxplayers, steamid, gamemode) {
+  if (servername) {
+    document.getElementById("server-name").textContent = servername;
+  }
+
+  document.getElementById("status-line").textContent = "Carte : " + mapname;
+  applyMap(mapname);
+}
+
+var filesTotal = 0, filesNeeded = 0;
+
+function setBarProgress() {
+  var fill = document.getElementById("bar-fill");
+
+  if (filesTotal > 0) {
+    fill.style.width = Math.round((1 - filesNeeded / filesTotal) * 100) + "%";
+  }
+}
+
+function SetFilesTotal(total) {
+  filesTotal = total;
+  setBarProgress();
+}
+
+function SetFilesNeeded(needed) {
+  filesNeeded = needed;
+  setBarProgress();
+  document.getElementById("progress-label").textContent = needed + " fichier(s) restant(s)";
+}
+
+function DownloadingFile(name) {
+  document.getElementById("file-name").textContent = name;
+  document.getElementById("progress-label").textContent = "Téléchargement des fichiers...";
+}
+
+function SetStatusChanged(status) {
+  document.getElementById("progress-label").textContent = status;
+
+  if (status.indexOf("Workshop") > -1) {
+    document.getElementById("file-name").textContent = "";
+  }
+}
+</script>
+</body>
+</html>

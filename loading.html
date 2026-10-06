@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SWARP - Chargement</title>
+<style>
+  :root { --accent: #5abeff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #060910; color: #dce2eb;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+  #stars { position: fixed; inset: 0; }
+  .center { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; }
+  h1 { font-size: clamp(56px, 10vw, 120px); letter-spacing: .3em; padding-left: .3em; color: #fff; font-weight: 800; }
+  .sub { color: var(--accent); letter-spacing: .5em; font-size: clamp(12px, 1.6vw, 20px); margin-top: 6px; }
+  .rule { width: 240px; height: 2px; background: var(--accent); margin: 26px 0; opacity: .7; }
+  #status { font-size: 18px; margin-bottom: 14px; }
+  .bar { width: min(420px, 80vw); height: 4px; background: rgba(255,255,255,.12); }
+  #fill { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  #file { margin-top: 12px; font-size: 13px; color: #8b95a5; min-height: 1em; }
+  #tip { position: fixed; bottom: 7vh; width: 100%; text-align: center; font-style: italic; color: #96a0af; font-size: 15px; padding: 0 20px; }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="center">
+  <h1 id="name">SWARP</h1>
+  <div class="sub">STAR WARS ROLEPLAY</div>
+  <div class="rule"></div>
+  <div id="status">Connexion au serveur...</div>
+  <div class="bar"><div id="fill"></div></div>
+  <div id="file"></div>
+</div>
+<div id="tip"></div>
+
+<script>
+// --- Réglages -----------------------------------------------------------------------------
+var TIPS = [
+  "Respectez la hiérarchie : le rang de votre personnage n'est pas décoratif.",
+  "Utilisez /shop pour ouvrir la boutique.",
+  "La Carte Galactique est à la table holographique du vaisseau.",
+  "Le RP prime sur tout : restez dans votre personnage."
+];
+// ------------------------------------------------------------------------------------------
+
+var total = 0, needed = 0;
+var fill = document.getElementById("fill");
+var status = document.getElementById("status");
+var file = document.getElementById("file");
+
+function setProgress() {
+  if (total > 0) fill.style.width = Math.round((1 - needed / total) * 100) + "%";
+}
+
+// Fonctions appelées par Garry's Mod
+function GameDetails(servername, serverurl, mapname, maxplayers, steamid, gamemode) {
+  if (servername) document.getElementById("name").textContent = servername;
+  status.textContent = "Carte : " + mapname;
+}
+function SetFilesTotal(t) { total = t; setProgress(); }
+function SetFilesNeeded(n) { needed = n; setProgress(); }
+function DownloadingFile(name) { file.textContent = "Téléchargement : " + name; status.textContent = "Téléchargement des fichiers..."; }
+function SetStatusChanged(s) { status.textContent = s; if (s.indexOf("Workshop") > -1) { file.textContent = ""; } }
+
+document.getElementById("tip").textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+
+// Fond étoilé
+var c = document.getElementById("stars"), x = c.getContext("2d"), st = [];
+function resize() { c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener("resize", resize);
+for (var i = 0; i < 160; i++) st.push({x: Math.random(), y: Math.random(), z: Math.random() * 0.8 + 0.2});
+(function draw() {
+  x.clearRect(0, 0, c.width, c.height);
+  st.forEach(function (s) {
+    s.x -= s.z * 0.0004; if (s.x < 0) s.x = 1;
+    x.fillStyle = "rgba(255,255,255," + (0.25 + s.z * 0.6) + ")";
+    x.fillRect(s.x * c.width, s.y * c.height, s.z * 2, s.z * 2);
+  });
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
