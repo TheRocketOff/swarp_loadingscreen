@@ -189,12 +189,15 @@ var DEFAULT_ENTRY = {
 // Récupération du nom de carte : DEUX sources possibles, utilisées l'une et l'autre sans conflit.
 //   1) Le paramètre d'URL "mapname", si sv_loadingurl contient "%m" (voir README.md) - lu dès le
 //      chargement de la page, donc la vidéo correspond déjà avant même que GMod n'ait fini de
-//      s'initialiser.
-//   2) La fonction GameDetails(...), appelée directement par le moteur GMod une fois la connexion
-//      établie (mécanisme standard de l'écran de chargement, indépendant de l'URL) - sert de
-//      confirmation/rattrapage si l'admin a oublié "%m", ou si la carte affichée doit changer
-//      (ex : redirection serveur). La vidéo n'est changée que si le nom diffère de celle déjà
-//      appliquée, pour ne pas relancer inutilement la lecture en cours.
+//      s'initialiser. Ne sert QUE pour la toute première connexion : lors d'un changement de carte
+//      déclenché par le serveur (changelevel), GMod réutilise souvent le même panneau de chargement
+//      SANS recharger la page ni mettre à jour cette URL - ?mapname= reste alors bloqué sur la
+//      carte de connexion initiale.
+//   2) window.GameDetails(...), appelée DIRECTEMENT par le moteur GMod à chaque fois qu'un écran de
+//      chargement s'affiche - connexion initiale COMME changelevel (voir wiki.facepunch.com/gmod/
+//      Loading_URL) - avec le VRAI nom de la carte en cours, peu importe ce que dit l'URL. C'est
+//      donc la source fiable pour les changements de carte ; le paramètre d'URL n'est qu'un
+//      "premier affichage" avant même que GMod n'ait appelé GameDetails.
 // -------------------------------------------------------------------------------------------------
 var currentMapName = null;
 
@@ -207,14 +210,20 @@ function getMapNameFromURL() {
   }
 }
 
-function applyMap(mapname) {
-  if (!mapname || mapname === currentMapName) {
+//- Fonction réutilisable : applique la vidéo/le titre correspondant à "mapName", qu'elle vienne de
+// l'URL initiale ou de window.GameDetails (changelevel). Normalise la casse (minuscules) avant de
+// chercher dans MAP_DATA, pour qu'une différence de casse entre le nom de carte envoyé par GMod et
+// la clé déclarée ici ne fasse pas silencieusement retomber sur DEFAULT_ENTRY.
+function changePlanet(mapName) {
+  var normalized = (mapName || "").toLowerCase();
+
+  if (!normalized || normalized === currentMapName) {
     return;
   }
 
-  currentMapName = mapname;
+  currentMapName = normalized;
 
-  var entry = MAP_DATA[mapname] || DEFAULT_ENTRY;
+  var entry = MAP_DATA[normalized] || DEFAULT_ENTRY;
 
   document.getElementById("planet-name").textContent = entry.title || DEFAULT_ENTRY.title;
   document.getElementById("planet-desc").textContent = entry.desc || "";
@@ -257,18 +266,21 @@ function applyMap(mapname) {
   }
 }
 
-// Application immédiate depuis l'URL (si présente), sans attendre GameDetails.
-applyMap(getMapNameFromURL());
+// Application immédiate depuis l'URL (si présente), sans attendre GameDetails - seulement utile à
+// la toute première connexion (voir la note ci-dessus).
+changePlanet(getMapNameFromURL());
 
-// ---- Fonctions appelées directement par GMod (voir wiki.facepunch.com/gmod/Loading_URL) --------
-function GameDetails(servername, serverurl, mapname, maxplayers, steamid, gamemode) {
+// ---- Fonction appelée DIRECTEMENT par GMod, connexion initiale ET changelevel (voir wiki.
+// facepunch.com/gmod/Loading_URL) - assignée explicitement sur "window" pour que GMod la trouve
+// même si ce script est un jour chargé dans un contexte différent (module, etc.).
+window.GameDetails = function (servername, serverurl, mapname, maxplayers, steamid, gamemode) {
   if (servername) {
     document.getElementById("server-name").textContent = servername;
   }
 
   document.getElementById("status-line").textContent = "Carte : " + mapname;
-  applyMap(mapname);
-}
+  changePlanet(mapname);
+};
 
 var filesTotal = 0, filesNeeded = 0;
 
