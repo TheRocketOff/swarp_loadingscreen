@@ -19,13 +19,18 @@
   }
 
   /* ---- Image d'arrière-plan ------------------------------------------------------------------ */
+  /* "top/right/bottom/left" explicites plutôt que le raccourci "inset" : le navigateur intégré de
+     GMod (CEF, souvent une version de Chromium ancienne) ne reconnaît pas "inset" - l'élément se
+     retrouvait avec une taille nulle (donc invisible) même avec un background-image valide, alors
+     que les éléments déjà en top/right/bottom/left explicites (ex : #hud-top) s'affichaient bien. */
   #bg-image {
-    position: fixed; inset: 0; z-index: 0; background: #060910 center center / cover no-repeat;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 0;
+    background: #060910 center center / cover no-repeat;
   }
 
   /* ---- Dégradé sombre pour la lisibilité ---------------------------------------------------- */
   #overlay {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;
     background:
       linear-gradient(180deg, rgba(4,8,14,.55) 0%, rgba(4,8,14,.15) 30%, rgba(4,8,14,.25) 65%, rgba(2,5,10,.88) 100%),
       linear-gradient(90deg, rgba(2,5,10,.55) 0%, rgba(2,5,10,0) 35%, rgba(2,5,10,0) 70%, rgba(2,5,10,.55) 100%);
@@ -155,10 +160,10 @@
 // par défaut présents (voir images/README.md et audio/README.md).
 // -------------------------------------------------------------------------------------------------
 var MAP_DATA = {
-  "rp_venator_extensive_v1_4": {
-    image: "images/venator.jpg",
-    title: "Arrivée sur la Flotte de la République...",
-    desc: "Croiseur de Classe Venator - Flotte S.W.A.R.P",
+  "rp_coruscant_v1": {
+    image: "images/coruscant.jpg",
+    title: "Arrivée dans le secteur de Coruscant",
+    desc: "Capitale de la République",
     audio: null // ex: "audio/coruscant.mp3"
   },
   "rp_kamino_bana": {
@@ -177,8 +182,8 @@ var MAP_DATA = {
 
 var DEFAULT_ENTRY = {
   image: "images/default.jpg",
-  title: "Secteur perdu...",
-  desc: "Bordure Extérieur",
+  title: "Arrivée sur la Flotte de la République...",
+  desc: "Croiseur de Classe Venator - Flotte S.W.A.R.P",
   audio: null
 };
 
